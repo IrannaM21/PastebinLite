@@ -1,8 +1,15 @@
-﻿namespace PastebinLite.DTO;
+﻿using System.Text.Json.Serialization;
+
+namespace PastebinLite.DTO;
 
 public class CreatePasteRequest
 {
+    [JsonPropertyName("content")]
     public string Content { get; set; } = string.Empty;
-    public int? Ttl_Seconds { get; set; }
-    public int? Max_Views { get; set; }
+
+    [JsonPropertyName("ttl_seconds")]
+    public int? TtlSeconds { get; set; }
+
+    [JsonPropertyName("max_views")]
+    public int? MaxViews { get; set; }
 }

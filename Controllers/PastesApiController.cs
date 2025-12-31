@@ -24,10 +24,10 @@ public class PastesApiController : ControllerBase
         if (string.IsNullOrWhiteSpace(request.Content))
             return BadRequest(new { error = "content is required" });
 
-        if (request.Ttl_Seconds.HasValue && request.Ttl_Seconds < 1)
+        if (request.TtlSeconds.HasValue && request.TtlSeconds < 1)
             return BadRequest(new { error = "ttl_seconds must be >= 1" });
 
-        if (request.Max_Views.HasValue && request.Max_Views < 1)
+        if (request.MaxViews.HasValue && request.MaxViews < 1)
             return BadRequest(new { error = "max_views must be >= 1" });
 
         // 2️⃣ Create entity
@@ -36,12 +36,12 @@ public class PastesApiController : ControllerBase
             Id = Guid.NewGuid().ToString("N"),
             Content = request.Content,
             CreatedAt = DateTimeOffset.UtcNow,
-            TtlSeconds = request.Ttl_Seconds,
-            MaxViews = request.Max_Views,
+            TtlSeconds = request.TtlSeconds,
+            MaxViews = request.MaxViews,
             Views = 0
         };
 
-        // 3️⃣ Save to DB
+        // 3️⃣ Save
         await _repo.CreateAsync(paste);
 
         // 4️⃣ Response (PDF format)
@@ -56,36 +56,32 @@ public class PastesApiController : ControllerBase
     [HttpGet("{id}")]
     public async Task<IActionResult> Get(string id)
     {
-        // 1️ Fetch
         var paste = await _repo.GetAsync(id);
         if (paste == null)
             return NotFound();
 
-        // 2️ Current time (TEST_MODE supported)
         var now = AppTimeProvider.GetNow(Request);
 
-        // 3️⃣ TTL check
+        // TTL check
         if (paste.TtlSeconds.HasValue &&
             paste.CreatedAt.AddSeconds(paste.TtlSeconds.Value) <= now)
             return NotFound();
 
-        // 4️⃣ View limit check
+        // View limit check
         if (paste.MaxViews.HasValue &&
             paste.Views >= paste.MaxViews.Value)
             return NotFound();
 
-        // 5️⃣ Increment views
         await _repo.IncrementViewsAsync(id);
 
         int? remainingViews = paste.MaxViews.HasValue
-            ? (int?)(paste.MaxViews.Value - paste.Views - 1)
+            ? paste.MaxViews.Value - paste.Views - 1
             : null;
 
         DateTime? expiresAt = paste.TtlSeconds.HasValue
             ? paste.CreatedAt.AddSeconds(paste.TtlSeconds.Value).UtcDateTime
             : null;
 
-        // 6️⃣ Response (PDF format)
         return Ok(new
         {
             content = paste.Content,
