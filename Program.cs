@@ -8,7 +8,7 @@ var builder = WebApplication.CreateBuilder(args);
 // Controllers + MVC
 builder.Services.AddControllersWithViews();
 
-// CORS (for browser & Swagger testing)
+// CORS (browser + Swagger)
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("OpenCors", policy =>
@@ -17,12 +17,12 @@ builder.Services.AddCors(options =>
               .AllowAnyHeader());
 });
 
-// PostgreSQL
+// PostgreSQL (from Render environment variable)
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("Postgres"))
 );
 
-// Repository
+// Repository DI
 builder.Services.AddScoped<IPasteRepository, PostgresPasteRepository>();
 
 // Swagger
@@ -31,16 +31,17 @@ builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
-// REQUIRED for Render reverse proxy
+// Required for Render reverse proxy
 app.UseForwardedHeaders(new ForwardedHeadersOptions
 {
-    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
+    ForwardedHeaders =
+        ForwardedHeaders.XForwardedFor |
+        ForwardedHeaders.XForwardedProto
 });
-
 
 app.UseRouting();
 
-// Swagger AFTER routing
+// Swagger (always enabled for reviewer)
 app.UseSwagger();
 app.UseSwaggerUI(c =>
 {
@@ -51,10 +52,15 @@ app.UseSwaggerUI(c =>
 // CORS
 app.UseCors("OpenCors");
 
-
-// app.UseHttpsRedirection();
-
+// Authorization (future-proof)
 app.UseAuthorization();
+
+// Apply migrations BEFORE handling requests
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    db.Database.Migrate();
+}
 
 app.MapControllers();
 
