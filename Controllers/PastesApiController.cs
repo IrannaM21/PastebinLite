@@ -56,12 +56,12 @@ public class PastesApiController : ControllerBase
     [HttpGet("{id}")]
     public async Task<IActionResult> Get(string id)
     {
-        // 1️⃣ Fetch
+        // 1️ Fetch
         var paste = await _repo.GetAsync(id);
         if (paste == null)
             return NotFound();
 
-        // 2️⃣ Current time (TEST_MODE supported)
+        // 2️ Current time (TEST_MODE supported)
         var now = AppTimeProvider.GetNow(Request);
 
         // 3️⃣ TTL check
