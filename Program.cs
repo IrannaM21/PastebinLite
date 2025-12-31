@@ -1,14 +1,14 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.HttpOverrides;
 using PastebinLite.Data;
 using PastebinLite.Services;
-using Microsoft.AspNetCore.HttpOverrides;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Controllers + MVC (required for /p/{id})
+// Controllers + MVC
 builder.Services.AddControllersWithViews();
 
-// CORS (for browser testing)
+// CORS (for browser & Swagger testing)
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("OpenCors", policy =>
@@ -31,32 +31,31 @@ builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
-// REQUIRED for Render / reverse proxy
+// REQUIRED for Render reverse proxy
 app.UseForwardedHeaders(new ForwardedHeadersOptions
 {
     ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
 });
 
-// 🔥 REQUIRED FOR SWAGGER UI FILES
-app.UseStaticFiles();
 
-// 🔥 REQUIRED FOR ROUTING IN PROD
 app.UseRouting();
 
-// Swagger (always enabled for assignment)
+// Swagger AFTER routing
 app.UseSwagger();
 app.UseSwaggerUI(c =>
 {
     c.SwaggerEndpoint("/swagger/v1/swagger.json", "PastebinLite API v1");
-    c.RoutePrefix = "swagger"; // default but explicit
+    c.RoutePrefix = "swagger";
 });
 
-// CORS BEFORE endpoints
+// CORS
 app.UseCors("OpenCors");
+
+
+// app.UseHttpsRedirection();
 
 app.UseAuthorization();
 
-// Map endpoints
 app.MapControllers();
 
 app.Run();
