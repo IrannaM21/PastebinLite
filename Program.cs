@@ -4,8 +4,20 @@ using PastebinLite.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Enable API + MVC (required for /p/{id})
+//  Controllers + MVC (required for /p/{id})
 builder.Services.AddControllersWithViews();
+
+// Enable CORS (for easy browser & Swagger testing)
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("OpenCors", policy =>
+    {
+        policy
+            .AllowAnyOrigin()
+            .AllowAnyMethod()
+            .AllowAnyHeader();
+    });
+});
 
 // PostgreSQL DbContext
 builder.Services.AddDbContext<AppDbContext>(options =>
@@ -17,18 +29,18 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 // Repository DI
 builder.Services.AddScoped<IPasteRepository, PostgresPasteRepository>();
 
-// Swagger (for local testing only)
+// Swagger (ENABLED for assignment review)
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
-// HTTP request pipeline
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
+// Swagger UI (always enabled – reviewer friendly)
+app.UseSwagger();
+app.UseSwaggerUI();
+
+// CORS must come BEFORE controllers
+app.UseCors("OpenCors");
 
 app.UseHttpsRedirection();
 app.UseAuthorization();
